@@ -188,6 +188,11 @@
         </service>
 
         <service
+            android:name="androidx.work.multiprocess.RemoteWorkManagerService"
+            android:exported="false"
+            android:process=":bg" />
+
+        <service
             android:name=".service.V2RayProxyOnlyService"
             android:exported="false"
             android:foregroundServiceType="specialUse"

@@ -1,6 +1,7 @@
 package com.v2ray.ang.handler
 
 import com.tencent.mmkv.MMKV
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.DEFAULT_SUBSCRIPTION_ID
 import com.v2ray.ang.AppConfig.PREF_IS_BOOTED
 import com.v2ray.ang.AppConfig.PREF_ROUTING_RULESET
@@ -714,6 +715,14 @@ object MmkvManager {
     fun decodeWebDavConfig(): WebDavConfig? {
         val json = mainStorage.decodeString(KEY_WEBDAV_CONFIG) ?: return null
         return JsonUtil.fromJson(json, WebDavConfig::class.java)
+    }
+
+    fun decodeLastSubscriptionUpdateAttempt(): Long {
+        return settingsStorage.decodeLong(AppConfig.PREF_LAST_SUBSCRIPTION_UPDATE_ATTEMPT, -1)
+    }
+
+    fun encodeLastSubscriptionUpdateAttempt(value: Long) {
+        settingsStorage.encode(AppConfig.PREF_LAST_SUBSCRIPTION_UPDATE_ATTEMPT, value)
     }
 
     //endregion

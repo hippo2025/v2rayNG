@@ -10,8 +10,15 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.v2ray.ang.AppConfig
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.multiprocess.RemoteWorkManager
+import com.v2ray.ang.AngApplication
 import com.v2ray.ang.R
+import com.v2ray.ang.extension.toLongEx
 import com.v2ray.ang.util.LogUtil
+import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 object SubscriptionUpdater {
 
@@ -35,6 +42,7 @@ object SubscriptionUpdater {
         @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
             LogUtil.i(AppConfig.TAG, "subscription automatic update starting")
+            MmkvManager.encodeLastSubscriptionUpdateAttempt(System.currentTimeMillis())
 
             val subs = MmkvManager.decodeSubscriptions().filter { it.subscription.autoUpdate }
 
@@ -58,6 +66,41 @@ object SubscriptionUpdater {
             }
             notificationManager.cancel(3)
             return Result.success()
+        }
+    }
+
+    fun configureUpdateTask(interval: Long) {
+        val rw = RemoteWorkManager.getInstance(AngApplication.application)
+        val lastAttempt = MmkvManager.decodeLastSubscriptionUpdateAttempt()
+        val intervalMillis = interval * 60 * 1000
+        val now = System.currentTimeMillis()
+        val delayMillis = if (lastAttempt <= 0L) 0L else max(0L, lastAttempt + intervalMillis - now)
+
+        rw.enqueueUniquePeriodicWork(
+            AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequest.Builder(
+                UpdateTask::class.java,
+                interval,
+                TimeUnit.MINUTES
+            )
+                .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                .build()
+        )
+    }
+
+    fun cancelUpdateTask() {
+        val rw = RemoteWorkManager.getInstance(AngApplication.application)
+        rw.cancelUniqueWork(AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME)
+    }
+
+    fun scheduleIfNeeded() {
+        if (MmkvManager.decodeSettingsBool(AppConfig.SUBSCRIPTION_AUTO_UPDATE)) {
+            val interval = MmkvManager.decodeSettingsString(
+                AppConfig.SUBSCRIPTION_AUTO_UPDATE_INTERVAL,
+                AppConfig.SUBSCRIPTION_DEFAULT_UPDATE_INTERVAL
+            )?.toLongEx() ?: AppConfig.SUBSCRIPTION_DEFAULT_UPDATE_INTERVAL.toLong()
+            configureUpdateTask(interval)
         }
     }
 }

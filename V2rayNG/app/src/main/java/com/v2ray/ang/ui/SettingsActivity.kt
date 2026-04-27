@@ -101,16 +101,18 @@ class SettingsActivity : BaseActivity() {
                 autoUpdateCheck?.isChecked = value
                 autoUpdateInterval?.isEnabled = value
                 autoUpdateInterval?.text?.toLongEx()?.let {
-                    if (newValue) configureUpdateTask(it) else cancelUpdateTask()
+                    if (newValue) SubscriptionUpdater.configureUpdateTask(it) else SubscriptionUpdater.cancelUpdateTask()
                 }
                 true
             }
 
-            autoUpdateInterval?.setOnPreferenceChangeListener { _, newValue ->
-                val interval = (newValue as? String)?.toLongEx()
+            autoUpdateInterval?.setOnPreferenceChangeListener { p, newValue ->
+                val intervalStr = newValue as? String
+                val interval = intervalStr?.toLongEx()
                 if (interval != null && autoUpdateCheck?.isChecked == true) {
-                    configureUpdateTask(interval)
+                    SubscriptionUpdater.configureUpdateTask(interval)
                 }
+                p.summary = intervalStr.orEmpty()
                 true
             }
 
@@ -241,29 +243,6 @@ class SettingsActivity : BaseActivity() {
             fakeDns?.isEnabled = enabled
 //            localDnsPort?.isEnabled = enabled
             vpnDns?.isEnabled = !enabled
-        }
-
-        private fun configureUpdateTask(interval: Long) {
-            val rw = RemoteWorkManager.getInstance(AngApplication.application)
-            rw.cancelUniqueWork(AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME)
-            rw.enqueueUniquePeriodicWork(
-                AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                PeriodicWorkRequest.Builder(
-                    SubscriptionUpdater.UpdateTask::class.java,
-                    interval,
-                    TimeUnit.MINUTES
-                )
-                    .apply {
-                        setInitialDelay(interval, TimeUnit.MINUTES)
-                    }
-                    .build()
-            )
-        }
-
-        private fun cancelUpdateTask() {
-            val rw = RemoteWorkManager.getInstance(AngApplication.application)
-            rw.cancelUniqueWork(AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME)
         }
 
         private fun updateMux(enabled: Boolean) {
