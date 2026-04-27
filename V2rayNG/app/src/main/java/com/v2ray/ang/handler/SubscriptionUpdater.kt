@@ -7,11 +7,13 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkerParameters
 import com.v2ray.ang.AppConfig
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequest
 import androidx.work.multiprocess.RemoteWorkManager
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.R
@@ -76,6 +78,10 @@ object SubscriptionUpdater {
         val now = System.currentTimeMillis()
         val delayMillis = if (lastAttempt <= 0L) 0L else max(0L, lastAttempt + intervalMillis - now)
 
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
         rw.enqueueUniquePeriodicWork(
             AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
@@ -85,6 +91,7 @@ object SubscriptionUpdater {
                 TimeUnit.MINUTES
             )
                 .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                .setConstraints(constraints)
                 .build()
         )
     }
