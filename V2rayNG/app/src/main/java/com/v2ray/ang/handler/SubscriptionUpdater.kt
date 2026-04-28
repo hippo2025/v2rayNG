@@ -62,7 +62,7 @@ object SubscriptionUpdater {
                     notificationManager.createNotificationChannel(channel)
                 }
                 notificationManager.notify(3, notification.build())
-                LogUtil.i(AppConfig.TAG, "subscription automatic update: ---${subItem.remarks}")
+                LogUtil.i(AppConfig.TAG, "subscription automatic update: ---${subItem.remarks} (${sub.guid})")
                 AngConfigManager.updateConfigViaSub(sub)
                 notification.setContentText("Updating ${subItem.remarks}")
             }
@@ -81,6 +81,8 @@ object SubscriptionUpdater {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
+
+        LogUtil.i(AppConfig.TAG, "Next auto-update scheduled in $delayMillis ms (interval: $interval min)")
 
         rw.enqueueUniquePeriodicWork(
             AppConfig.SUBSCRIPTION_UPDATE_TASK_NAME,
@@ -102,6 +104,7 @@ object SubscriptionUpdater {
     }
 
     fun scheduleIfNeeded() {
+        LogUtil.d(AppConfig.TAG, "Auto-update schedule requested")
         if (MmkvManager.decodeSettingsBool(AppConfig.SUBSCRIPTION_AUTO_UPDATE)) {
             val interval = MmkvManager.decodeSettingsString(
                 AppConfig.SUBSCRIPTION_AUTO_UPDATE_INTERVAL,
